@@ -73,17 +73,17 @@ def format_money(amount, currency):
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
-    def init_db():
+        def init_db():
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
     
     # Исправляем базу, добавляя колонки
-    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT FALSE")
-    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS application_sent BOOLEAN DEFAULT FALSE")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT FALSE")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS application_sent BOOLEAN DEFAULT FALSE")
     
     # Создаем таблицу пользователей
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users (
         id BIGINT PRIMARY KEY,
         username TEXT,
         balance INTEGER DEFAULT 3000,
