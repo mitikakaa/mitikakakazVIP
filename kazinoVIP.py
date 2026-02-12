@@ -74,6 +74,7 @@ def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
     def init_db():
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     
