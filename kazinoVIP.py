@@ -73,20 +73,22 @@ def format_money(amount, currency):
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
-def init_db():
+    def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
-cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT FALSE")
+    
+    # Эти две строки добавят колонки, если их еще нет в старой базе
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT FALSE")
     cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS application_sent BOOLEAN DEFAULT FALSE")
     
+    # Ваш основной код создания таблиц
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-        id BIGINT PRIMARY KEY, 
-        username TEXT, 
-        balance INTEGER DEFAULT 3000, 
-        bonuses INTEGER DEFAULT 0, 
-        bonus_bet INTEGER DEFAULT 0, 
-        last_daily BIGINT DEFAULT 0, 
+        id BIGINT PRIMARY KEY,
+        username TEXT,
+        balance INTEGER DEFAULT 3000,
+        bonuses INTEGER DEFAULT 0,
+        bonus_bet INTEGER DEFAULT 0,
+        last_daily BIGINT DEFAULT 0,
         current_bet INTEGER DEFAULT 100,
         bonus_total_win INTEGER DEFAULT 0,
         bonus_buys_count INTEGER DEFAULT 0,
