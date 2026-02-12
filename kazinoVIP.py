@@ -76,7 +76,10 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
-
+cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT FALSE")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS application_sent BOOLEAN DEFAULT FALSE")
+    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
         id BIGINT PRIMARY KEY, 
         username TEXT, 
