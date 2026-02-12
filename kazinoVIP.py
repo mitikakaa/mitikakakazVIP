@@ -77,11 +77,11 @@ def get_db_connection():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Эти две строки добавят колонки, если их еще нет в старой базе
+    # Исправляем базу, добавляя колонки
     cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT FALSE")
     cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS application_sent BOOLEAN DEFAULT FALSE")
     
-    # Ваш основной код создания таблиц
+    # Создаем таблицу пользователей
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
         id BIGINT PRIMARY KEY,
         username TEXT,
@@ -98,6 +98,20 @@ def get_db_connection():
         approved BOOLEAN DEFAULT FALSE,
         application_sent BOOLEAN DEFAULT FALSE
     )''')
+
+    # Создаем таблицу джекпота
+    cursor.execute('''CREATE TABLE IF NOT EXISTS jackpot (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        current_amount INTEGER DEFAULT 0,
+        target_amount INTEGER DEFAULT 500000,
+        last_won_at BIGINT DEFAULT 0,
+        total_won INTEGER DEFAULT 0
+    )''')
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
     
     # ✅ НОВОЕ: Таблица для котла
     cursor.execute('''CREATE TABLE IF NOT EXISTS jackpot (
