@@ -346,10 +346,10 @@ def cmd_start(m):
                     f"Для доступа к боту выполни следующие шаги:\n\n"
                     f"1️⃣ Переведи **{ENTRY_FEE}** на карту:\n"
                     f"`{PAYMENT_CARD}`\n\n"
-                    f"2️⃣ **ОБЯЗАТЕЛЬНО** укажи при переводе комментарий:\n"
+                    f"2️⃣ **ОБЯЗАТЕЛЬНО** должен быть username:\n"
                     f"`@{user_tg}`\n\n"
                     f"3️⃣ Нажми кнопку ниже после перевода\n\n"
-                    f"⚠️ **Важно:** Без комментария с твоим username заявка не будет одобрена!",
+                    f"⚠️ **Важно:** Без твоего username заявка не будет одобрена!",
                     reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_payment_"))
