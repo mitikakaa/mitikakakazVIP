@@ -13,7 +13,7 @@ from flask import Flask, request
 app = Flask(__name__)
 
 # ⚠️ ВАЖНО: Твой токен в открытом доступе. Смени его в BotFather, если бота взломают.
-TOKEN = '8524841805:AAGnJNG8DDfOxc0Zyubzt1uEXNYe9sHLaCM'
+TOKEN = '7956381149:AAGDHwC2Hbj0eYSACNUb8CBZcQ6x6bTNFj0'
 bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=5)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
