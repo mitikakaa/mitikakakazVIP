@@ -85,9 +85,6 @@ def init_db():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        cursor.execute("DROP TABLE IF EXISTS users_vip CASCADE;")
-        cursor.execute("DROP TABLE IF EXISTS jackpot CASCADE;")
 
         # Создаем НОВУЮ таблицу users_vip (чтобы отделить от первого бота)
         cursor.execute('''CREATE TABLE IF NOT EXISTS users_vip (
