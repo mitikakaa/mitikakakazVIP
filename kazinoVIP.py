@@ -1044,7 +1044,7 @@ if __name__ == '__main__':
         bot.delete_webhook()
         time.sleep(1)
         
-        webhook_url = f"https://kazino-1.onrender.com/{TOKEN}"
+        webhook_url = f"https://mitikakakazvip.onrender.com/{TOKEN}"
         bot.set_webhook(url=webhook_url)
         print(f"✅ Webhook установлен: {webhook_url}")
         print("🚀 Бот запущен успешно!")
