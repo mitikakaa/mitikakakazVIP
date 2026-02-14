@@ -906,10 +906,18 @@ def health():
 
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    json_data = request.get_json()
-    update = telebot.types.Update.de_json(json_data)
-    bot.process_new_updates([update])
-    return "OK", 200
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        try:
+            update = telebot.types.Update.de_json(json_string)
+            bot.process_new_updates([update])
+        except Exception as e:
+            # Если пришла история или ошибка - просто пишем в лог и не падаем
+            print(f"⚠️ Ошибка (пропущено): {e}")
+        return "OK", 200
+    else:
+        return "Forbidden", 403
+        
 
 if __name__ == '__main__':
     try:
