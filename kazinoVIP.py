@@ -53,7 +53,7 @@ PAYTABLE = {
     "🍍": [0.00003, 0.00003, 0.00003]
 }
 
-# ✅ Курсы валют
+# ✅ Курсы валют (оставляем для внутренней логики, но менять нельзя)
 EXCHANGE_RATES = {
     'RUB': 1.0,
     'USD': 95.0,
@@ -107,7 +107,7 @@ def init_db():
         
         conn.commit()
         
-        # Таблица для котла (общая, но можно тоже разделить при желании)
+        # Таблица для котла
         cursor.execute('''CREATE TABLE IF NOT EXISTS jackpot (
             id INTEGER PRIMARY KEY,
             current_amount INTEGER DEFAULT 0,
@@ -293,7 +293,7 @@ def main_menu():
     markup.row("🎰 Крутить", "🎁 Daily")
     markup.row("🛒 Buy Bonus", "💰 Баланс")
     markup.row("🔝 ТОП богачей", "🏆 Котел")
-    markup.row("💱 Валюта")
+    # Кнопка валюты удалена
     return markup
 
 @bot.message_handler(commands=['start'])
@@ -548,28 +548,6 @@ def cmd_jackpot(m):
     except Exception as e:
         bot.send_message(m.chat.id, f"❌ Ошибка: {e}")
 
-@bot.message_handler(func=lambda m: m.text in ["💱 Валюта", "/currency"])
-def cmd_currency(m):
-    u = get_user(m.from_user.id, m.from_user.first_name)
-    if not u.get('approved'):
-        return bot.reply_to(m, "❌ Доступ закрыт! Отправь заявку через /start")
-    if not is_game_active():
-        return bot.reply_to(m, f"⏳ Игра еще не началась! Ожидаем игроков: {get_approved_players_count()}/{MIN_PLAYERS}")
-    
-    current = u.get('currency', 'RUB')
-    
-    markup = types.InlineKeyboardMarkup()
-    markup.row(
-        types.InlineKeyboardButton("₽ Рубли (RUB)", callback_data="currency_RUB"),
-        types.InlineKeyboardButton("$ Доллары (USD)", callback_data="currency_USD")
-    )
-    markup.row(
-        types.InlineKeyboardButton("€ Евро (EUR)", callback_data="currency_EUR")
-    )
-    
-    bot.send_message(m.chat.id, f"💱 Текущая валюта: **{CURRENCY_SYMBOLS[current]} {current}**\n\nВыбери новую:", 
-                     reply_markup=markup, parse_mode="Markdown")
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith("approve_") or call.data.startswith("reject_"))
 def callback_application(call):
     if call.from_user.id != ADMIN_ID:
@@ -647,27 +625,6 @@ def notify_game_start():
                            parse_mode="Markdown")
         except:
             pass
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("currency_"))
-def callback_currency(call):
-    new_currency = call.data.split("_")[1]
-    uid = call.from_user.id
-    u = get_user(uid, call.from_user.first_name)
-    
-    old_currency = u.get('currency', 'RUB')
-    
-    new_balance = convert_currency(u['balance'], old_currency, new_currency)
-    new_bet = convert_currency(u['current_bet'], old_currency, new_currency)
-    
-    update_user(uid, currency=new_currency, balance=new_balance, current_bet=new_bet)
-    
-    bot.answer_callback_query(call.id, "✅ Валюта изменена!")
-    bot.edit_message_text(
-        f"✅ Валюта изменена на **{CURRENCY_SYMBOLS[new_currency]} {new_currency}**\n\n"
-        f"💰 Баланс: {format_money(new_balance, new_currency)}\n"
-        f"🎰 Ставка: {format_money(new_bet, new_currency)}",
-        call.message.chat.id, call.message.message_id, parse_mode="Markdown"
-    )
 
 @bot.message_handler(func=lambda m: m.text in ["🛒 Buy Bonus", "/buybonus"])
 def cmd_buy(m):
