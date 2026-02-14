@@ -12,7 +12,7 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-# ⚠️ ВАЖНО: Твой токен в открытом доступе. Смени его в BotFather, если бота взломают.
+# ⚠️ ВАЖНО: Твой токен
 TOKEN = '7956381149:AAGDHwC2Hbj0eYSACNUb8CBZcQ6x6bTNFj0'
 bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=5)
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -23,20 +23,20 @@ if not DATABASE_URL:
     print("Установи её в настройках окружения (Environment Variables)")
     sys.exit(1)
 
-# ✅ НОВОЕ: Настройки админа и заявок
+# ✅ Настройки админа и заявок
 ADMIN_ID = 6408686413  # Твой Telegram ID
 PAYMENT_CARD = "2204 3206 0446 8167"  # Реквизиты карты
-ENTRY_FEE = "30₽"  # Сумма для входа (можешь поменять)
-MIN_PLAYERS = 10  # Минимум игроков для запуска (не считая админа)
+ENTRY_FEE = "30₽"  # Сумма для входа
+MIN_PLAYERS = 10  # Минимум игроков для запуска
 
 user_last_click = {}
 
-# ✅ НОВОЕ: Настройки котла
-JACKPOT_PERCENTAGE_MIN = 2  # Минимум 2% от выигрыша
-JACKPOT_PERCENTAGE_MAX = 10  # Максимум 10% от выигрыша
-JACKPOT_TARGET = 500000  # Цель котла в рублях (при 10 игроках)
+# ✅ Настройки котла
+JACKPOT_PERCENTAGE_MIN = 2
+JACKPOT_PERCENTAGE_MAX = 10
+JACKPOT_TARGET = 500000
 
-# ✅ ИСПРАВЛЕНО: В бонусе МЕНЬШЕ пустышек = больше лавин и выигрышей!
+# ✅ Фрукты и шансы
 ITEMS = ["🍎"]*12 + ["🍇"]*15 + ["🍉"]*15 + ["🍑"]*16 + ["🍒"]*17 + ["🍬"]*11 + ["🍭"]*2 + ["🍌"]*3 + ["🍋"]*3 + ["🍍"]*4
 ITEMS_BONUS = ["🍎"]*22 + ["🍇"]*24 + ["🍉"]*24 + ["🍑"]*24 + ["🍒"]*25 + ["🍬"]*16 + ["🍭"]*0 + ["🍌"]*2 + ["🍋"]*4 + ["🍍"]*2
 FRUITS_ONLY = ["🍎", "🍇", "🍉", "🍑", "🍒", "🍬"]
@@ -48,16 +48,16 @@ PAYTABLE = {
     "🍉": [0.5, 1.0, 5.0],
     "🍑": [0.4, 0.9, 4.0],
     "🍒": [0.25, 0.75, 2.0],
-    "🍌": [0.00003, 0.00003, 0.00003], # Даст ~25р при ставке 100к
+    "🍌": [0.00003, 0.00003, 0.00003],
     "🍋": [0.00003, 0.00003, 0.00003],
     "🍍": [0.00003, 0.00003, 0.00003]
 }
 
-# ✅ НОВОЕ: Курсы валют
+# ✅ Курсы валют
 EXCHANGE_RATES = {
     'RUB': 1.0,
-    'USD': 95.0,   # 1 USD = 95 RUB
-    'EUR': 105.0   # 1 EUR = 105 RUB
+    'USD': 95.0,
+    'EUR': 105.0
 }
 
 CURRENCY_SYMBOLS = {
@@ -67,12 +67,10 @@ CURRENCY_SYMBOLS = {
 }
 
 def convert_currency(amount, from_currency, to_currency):
-    """Конвертирует сумму из одной валюты в другую"""
     rub_amount = amount * EXCHANGE_RATES[from_currency]
     return int(rub_amount / EXCHANGE_RATES[to_currency])
 
 def format_money(amount, currency):
-    """Форматирует сумму с символом валюты"""
     symbol = CURRENCY_SYMBOLS.get(currency, '₽')
     return f"{amount}{symbol}"
 
@@ -88,8 +86,8 @@ def init_db():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Создаем таблицу users если её нет
-        cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+        # Создаем НОВУЮ таблицу users_vip (чтобы отделить от первого бота)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users_vip (
             id BIGINT PRIMARY KEY, 
             username TEXT, 
             balance INTEGER DEFAULT 3000, 
@@ -103,37 +101,13 @@ def init_db():
             currency TEXT DEFAULT 'RUB',
             jackpot_contribution INTEGER DEFAULT 0,
             approved BOOLEAN DEFAULT FALSE,
-            application_sent BOOLEAN DEFAULT FALSE
+            application_sent BOOLEAN DEFAULT FALSE,
+            application_photo TEXT DEFAULT NULL
         )''')
         
         conn.commit()
         
-        # Проверяем и добавляем новые колонки если их нет (для старых БД)
-        cursor.execute("""
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name='users' AND column_name='jackpot_contribution'
-        """)
-        if not cursor.fetchone():
-            cursor.execute("ALTER TABLE users ADD COLUMN jackpot_contribution INTEGER DEFAULT 0")
-            conn.commit()
-        
-        cursor.execute("""
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name='users' AND column_name='approved'
-        """)
-        if not cursor.fetchone():
-            cursor.execute("ALTER TABLE users ADD COLUMN approved BOOLEAN DEFAULT FALSE")
-            conn.commit()
-        
-        cursor.execute("""
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name='users' AND column_name='application_sent'
-        """)
-        if not cursor.fetchone():
-            cursor.execute("ALTER TABLE users ADD COLUMN application_sent BOOLEAN DEFAULT FALSE")
-            conn.commit()
-        
-        # ✅ НОВОЕ: Таблица для котла
+        # Таблица для котла (общая, но можно тоже разделить при желании)
         cursor.execute('''CREATE TABLE IF NOT EXISTS jackpot (
             id INTEGER PRIMARY KEY,
             current_amount INTEGER DEFAULT 0,
@@ -149,14 +123,14 @@ def init_db():
         
         conn.commit()
         
-        # ✅ Автоматически одобряем админа
-        cursor.execute("SELECT * FROM users WHERE id = %s", (ADMIN_ID,))
+        # ✅ Автоматически одобряем админа в НОВОЙ таблице
+        cursor.execute("SELECT * FROM users_vip WHERE id = %s", (ADMIN_ID,))
         admin = cursor.fetchone()
         if admin:
-            cursor.execute("UPDATE users SET approved = TRUE WHERE id = %s", (ADMIN_ID,))
+            cursor.execute("UPDATE users_vip SET approved = TRUE WHERE id = %s", (ADMIN_ID,))
         else:
             cursor.execute(
-                "INSERT INTO users (id, username, balance, current_bet, currency, approved, jackpot_contribution) VALUES (%s, %s, 3000, 100, 'RUB', TRUE, 0)",
+                "INSERT INTO users_vip (id, username, balance, current_bet, currency, approved, jackpot_contribution) VALUES (%s, %s, 3000, 100, 'RUB', TRUE, 0)",
                 (ADMIN_ID, "Admin")
             )
         
@@ -171,13 +145,13 @@ def init_db():
 def get_user(uid, name="Игрок"):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE id = %s", (uid,))
+    # Используем users_vip
+    cursor.execute("SELECT * FROM users_vip WHERE id = %s", (uid,))
     res = cursor.fetchone()
     if not res:
-        # Админ автоматически одобрен
         is_approved = (uid == ADMIN_ID)
         cursor.execute(
-            "INSERT INTO users (id, username, balance, current_bet, currency, jackpot_contribution, approved) VALUES (%s, %s, 3000, 100, 'RUB', 0, %s)",
+            "INSERT INTO users_vip (id, username, balance, current_bet, currency, jackpot_contribution, approved) VALUES (%s, %s, 3000, 100, 'RUB', 0, %s)",
             (uid, name, is_approved)
         )
         conn.commit()
@@ -185,9 +159,8 @@ def get_user(uid, name="Игрок"):
         conn.close()
         return get_user(uid, name)
     else:
-        # ✅ Обновляем имя каждый раз
         if name and name != "Игрок":
-            cursor.execute("UPDATE users SET username = %s WHERE id = %s", (name, uid))
+            cursor.execute("UPDATE users_vip SET username = %s WHERE id = %s", (name, uid))
             conn.commit()
     cursor.close()
     conn.close()
@@ -198,14 +171,13 @@ def update_user(uid, **kwargs):
     cursor = conn.cursor()
     cols = ", ".join([f"{k} = %s" for k in kwargs.keys()])
     vals = list(kwargs.values()) + [uid]
-    cursor.execute(f"UPDATE users SET {cols} WHERE id = %s", vals)
+    # Используем users_vip
+    cursor.execute(f"UPDATE users_vip SET {cols} WHERE id = %s", vals)
     conn.commit()
     cursor.close()
     conn.close()
 
-# ✅ НОВОЕ: Функции для работы с котлом
 def get_jackpot():
-    """Получить текущее состояние котла"""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM jackpot WHERE id = 1")
@@ -215,17 +187,13 @@ def get_jackpot():
     return dict(res) if res else {'current_amount': 0, 'target_amount': JACKPOT_TARGET}
 
 def add_to_jackpot(uid, amount_rub):
-    """Добавить деньги в котел (всегда в рублях)"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Обновляем котел
     cursor.execute("UPDATE jackpot SET current_amount = current_amount + %s WHERE id = 1", (amount_rub,))
+    # Используем users_vip
+    cursor.execute("UPDATE users_vip SET jackpot_contribution = jackpot_contribution + %s WHERE id = %s", (amount_rub, uid))
     
-    # Обновляем вклад игрока
-    cursor.execute("UPDATE users SET jackpot_contribution = jackpot_contribution + %s WHERE id = %s", (amount_rub, uid))
-    
-    # Проверяем, достигнута ли цель
     cursor.execute("SELECT current_amount, target_amount FROM jackpot WHERE id = 1")
     jp = cursor.fetchone()
     
@@ -236,11 +204,11 @@ def add_to_jackpot(uid, amount_rub):
     return jp['current_amount'] >= jp['target_amount']
 
 def get_jackpot_top(limit=10):
-    """Получить топ вкладчиков в котел"""
     conn = get_db_connection()
     cursor = conn.cursor()
+    # Используем users_vip
     cursor.execute(
-        "SELECT username, jackpot_contribution, currency FROM users WHERE jackpot_contribution > 0 ORDER BY jackpot_contribution DESC LIMIT %s",
+        "SELECT username, jackpot_contribution, currency FROM users_vip WHERE jackpot_contribution > 0 ORDER BY jackpot_contribution DESC LIMIT %s",
         (limit,)
     )
     res = cursor.fetchall()
@@ -249,67 +217,59 @@ def get_jackpot_top(limit=10):
     return res
 
 def get_approved_players_count():
-    """Получить количество одобренных игроков (не считая админа)"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) as count FROM users WHERE approved = TRUE AND id != %s", (ADMIN_ID,))
+    # Используем users_vip
+    cursor.execute("SELECT COUNT(*) as count FROM users_vip WHERE approved = TRUE AND id != %s", (ADMIN_ID,))
     res = cursor.fetchone()
     cursor.close()
     conn.close()
     return res['count'] if res else 0
 
 def is_game_active():
-    """Проверить, можно ли играть (набрано ли 10 игроков)"""
     return get_approved_players_count() >= MIN_PLAYERS
 
 def get_pending_applications():
-    """Получить список заявок на рассмотрении"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username FROM users WHERE approved = FALSE AND application_sent = TRUE")
+    # Используем users_vip
+    cursor.execute("SELECT id, username FROM users_vip WHERE approved = FALSE AND application_sent = TRUE")
     res = cursor.fetchall()
     cursor.close()
     conn.close()
     return res
 
 def approve_user(uid):
-    """Одобрить пользователя"""
     update_user(uid, approved=True)
 
 def reject_user(uid):
-    """Отклонить заявку пользователя"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET application_sent = FALSE WHERE id = %s", (uid,))
+    # Используем users_vip
+    cursor.execute("UPDATE users_vip SET application_sent = FALSE WHERE id = %s", (uid,))
     conn.commit()
     cursor.close()
     conn.close()
 
 def reset_jackpot():
-    """Сбросить котел после выигрыша и обнулить балансы всех игроков"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Получаем текущую сумму
     cursor.execute("SELECT current_amount FROM jackpot WHERE id = 1")
     current = cursor.fetchone()['current_amount']
     
-    # Сбрасываем котел
     cursor.execute("UPDATE jackpot SET current_amount = 0, last_won_at = %s, total_won = total_won + %s WHERE id = 1", 
                    (int(time.time()), current))
     
-    # ✅ ВАЖНО: Обнуляем балансы всех игроков до 3000₽
-    # Конвертируем 3000₽ в текущую валюту каждого игрока
-    cursor.execute("SELECT id, currency FROM users")
+    # Используем users_vip для сброса
+    cursor.execute("SELECT id, currency FROM users_vip")
     users = cursor.fetchall()
     
     for user in users:
-        # Конвертируем 3000 рублей в валюту игрока
         new_balance = convert_currency(3000, 'RUB', user['currency'])
-        cursor.execute("UPDATE users SET balance = %s WHERE id = %s", (new_balance, user['id']))
+        cursor.execute("UPDATE users_vip SET balance = %s WHERE id = %s", (new_balance, user['id']))
     
-    # ✅ НОВОЕ: Сбрасываем вклады игроков для НОВОГО топа
-    cursor.execute("UPDATE users SET jackpot_contribution = 0")
+    cursor.execute("UPDATE users_vip SET jackpot_contribution = 0")
     
     conn.commit()
     cursor.close()
@@ -317,16 +277,11 @@ def reset_jackpot():
     return current
 
 def get_active_chat_ids():
-    """Получить ID всех чатов где был активен бот (упрощенная версия)"""
-    # Для полноценной работы нужно сохранять chat_id при каждом сообщении
-    # Здесь возвращаем пустой список, т.к. нужна доработка
     return []
 
 def announce_jackpot_win(amount):
-    """Отправить сообщение о выигрыше котла во все чаты"""
     chat_ids = get_active_chat_ids()
     msg = f"🎉🎊 КОТЕЛ НАБРАН! 🎊🎉\n\n💰 Сумма котла: {format_money(amount, 'RUB')}\n\n🍀 Поздравляем всех игроков!"
-    
     for chat_id in chat_ids:
         try:
             bot.send_message(chat_id, msg, parse_mode="Markdown")
@@ -346,7 +301,6 @@ def cmd_start(m):
     uid = m.from_user.id
     u = get_user(uid, m.from_user.first_name)
     
-    # Админ всегда имеет доступ
     if uid == ADMIN_ID:
         bot.send_message(m.chat.id, 
                         f"👑 **АДМИН-ПАНЕЛЬ**\n\n"
@@ -358,9 +312,7 @@ def cmd_start(m):
                         reply_markup=main_menu(), parse_mode="Markdown")
         return
     
-    # Если уже одобрен
     if u.get('approved'):
-        # Проверяем, набрано ли 10 игроков
         if not is_game_active():
             bot.send_message(m.chat.id, 
                            f"⏳ **БОТ ЕЩЕ НЕ ЗАПУЩЕН**\n\n"
@@ -376,7 +328,6 @@ def cmd_start(m):
                            reply_markup=main_menu(), parse_mode="Markdown")
         return
     
-    # Если заявка на рассмотрении
     if u.get('application_sent'):
         bot.send_message(m.chat.id, 
                         "⏳ **ЗАЯВКА НА РАССМОТРЕНИИ**\n\n"
@@ -385,7 +336,6 @@ def cmd_start(m):
                         parse_mode="Markdown")
         return
     
-    # Новый пользователь - показываем инструкцию
     user_tg = m.from_user.username if m.from_user.username else "НЕТ USERNAME"
     
     markup = types.InlineKeyboardMarkup()
@@ -407,21 +357,17 @@ def callback_confirm_payment(call):
     uid_str = call.data.split("_")[2]
     uid = int(uid_str)
     
-    # Только сам пользователь может подтвердить
     if call.from_user.id != uid:
         return bot.answer_callback_query(call.id, "❌ Это не твоя заявка!")
     
     u = get_user(uid, call.from_user.first_name)
     
-    # Если уже одобрен
     if u.get('approved'):
         return bot.answer_callback_query(call.id, "✅ Ты уже одобрен!")
     
-    # Если уже есть заявка
     if u.get('application_sent'):
         return bot.answer_callback_query(call.id, "⏳ Заявка уже отправлена!")
     
-    # Отправляем заявку
     update_user(uid, application_sent=True)
     
     username = call.from_user.username if call.from_user.username else "Без username"
@@ -475,7 +421,8 @@ def cmd_players(m):
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, balance, currency FROM users WHERE approved = TRUE AND id != %s", (ADMIN_ID,))
+    # Используем users_vip
+    cursor.execute("SELECT id, username, balance, currency FROM users_vip WHERE approved = TRUE AND id != %s", (ADMIN_ID,))
     players = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -547,7 +494,8 @@ def cmd_top(m):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT username, balance, currency FROM users WHERE approved = TRUE ORDER BY balance DESC LIMIT 20")
+        # Используем users_vip
+        cursor.execute("SELECT username, balance, currency FROM users_vip WHERE approved = TRUE ORDER BY balance DESC LIMIT 20")
         res = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -565,7 +513,6 @@ def cmd_top(m):
     except:
         bot.send_message(m.chat.id, "❌ Ошибка")
 
-# ✅ НОВОЕ: Команда просмотра котла
 @bot.message_handler(func=lambda m: m.text in ["🏆 Котел", "/jackpot"])
 def cmd_jackpot(m):
     u = get_user(m.from_user.id, m.from_user.first_name)
@@ -625,7 +572,6 @@ def cmd_currency(m):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("approve_") or call.data.startswith("reject_"))
 def callback_application(call):
-    # Только админ может одобрять/отклонять
     if call.from_user.id != ADMIN_ID:
         return bot.answer_callback_query(call.id, "❌ Только для админа!")
     
@@ -648,7 +594,6 @@ def callback_application(call):
             parse_mode="Markdown"
         )
         
-        # Уведомляем пользователя
         try:
             bot.send_message(uid, 
                            f"🎉 **ЗАЯВКА ОДОБРЕНА!**\n\n"
@@ -657,7 +602,6 @@ def callback_application(call):
                            f"{'✅ Игра доступна! Используй /start' if is_game_active() else f'⏳ Ожидаем еще игроков для запуска'}",
                            parse_mode="Markdown")
             
-            # Если набралось 10 игроков - уведомляем всех
             if is_game_active():
                 notify_game_start()
         except:
@@ -675,7 +619,6 @@ def callback_application(call):
             parse_mode="Markdown"
         )
         
-        # Уведомляем пользователя
         try:
             bot.send_message(uid, 
                            "❌ **ЗАЯВКА ОТКЛОНЕНА**\n\n"
@@ -686,10 +629,10 @@ def callback_application(call):
             pass
 
 def notify_game_start():
-    """Уведомить всех одобренных игроков о запуске игры"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE approved = TRUE")
+    # Используем users_vip
+    cursor.execute("SELECT id FROM users_vip WHERE approved = TRUE")
     users = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -713,7 +656,6 @@ def callback_currency(call):
     
     old_currency = u.get('currency', 'RUB')
     
-    # Конвертируем баланс и ставку
     new_balance = convert_currency(u['balance'], old_currency, new_currency)
     new_bet = convert_currency(u['current_bet'], old_currency, new_currency)
     
@@ -765,23 +707,18 @@ def handle_photo(m):
     uid = m.from_user.id
     u = get_user(uid, m.from_user.first_name)
     
-    # Админ не отправляет заявки
     if uid == ADMIN_ID:
         return
     
-    # Если уже одобрен - игнорируем фото
     if u.get('approved'):
         return
     
-    # Если уже есть заявка на рассмотрении
     if u.get('application_photo'):
         return bot.reply_to(m, "⏳ Твоя заявка уже на рассмотрении!")
     
-    # Сохраняем file_id фото
     photo_id = m.photo[-1].file_id
     update_user(uid, application_photo=photo_id)
     
-    # Отправляем заявку админу
     username = m.from_user.username if m.from_user.username else "Без username"
     full_name = m.from_user.first_name or "Аноним"
     
@@ -811,7 +748,6 @@ def game(m):
     uid = m.from_user.id
     u = get_user(uid, m.from_user.first_name)
     
-    # Проверка доступа
     if not u.get('approved'):
         return bot.reply_to(m, "❌ Доступ закрыт! Отправь заявку через /start")
     if not is_game_active():
@@ -833,7 +769,6 @@ def game(m):
     ratio = balance / (bet + 1)
     volatility = 0.0
     
-    # ✅ Реалистичная волатильность Sweet Bonanza +2% жёсткости
     if is_bonus:
         if ratio > 1000: volatility = 0.40
         elif ratio > 500: volatility = 0.20
@@ -876,14 +811,12 @@ def game(m):
         tumble += 1
         curr_tumble_win, to_remove = 0, []
         
-        # ✅ Реалистичные шансы бомб (-2% от оригинала)
         bomb_chance = 40 if is_bonus else 2
         if random.random()*100 <= bomb_chance:
             val = random.choices([2,5,10,25,50,100], weights=[400,250,120,40,8,2])[0]
             mults.append(val)
             grid[random.randint(0,29)] = f"💣x{val}"
 
-        # --- ОБЫЧНЫЕ ФРУКТЫ (Умножают ставку) ---
         for f in FRUITS_ONLY:
             cnt = grid.count(f)
             if cnt >= 8:
@@ -894,14 +827,11 @@ def game(m):
                 for i, x in enumerate(grid):
                     if x == f: to_remove.append(i)
 
-        # ✅ ИСПРАВЛЕНО: ПУСТЫШКИ ДАЮТ ВЫИГРЫШ, НО НЕ УДАЛЯЮТСЯ (НЕТ ЛАВИНЫ)
         for s in ["🍌", "🍋", "🍍"]:
             cnt = grid.count(s)
             if cnt >= 8:
-                curr_tumble_win += 2  # Фиксированный выигрыш 2 едениц валюты
+                curr_tumble_win += 2
                 details.append(f"{s} x{cnt} — 2")
-                # ❌ НЕ ДОБАВЛЯЕМ В to_remove - символы остаются на поле!
-        # -----------------------------------------------
 
         scatters_count = grid.count("🍭")
         
@@ -941,21 +871,14 @@ def game(m):
     if payout > bet*21000: 
         payout = bet*21000
 
-    # ✅ НОВОЕ: Отчисление в котел
     jackpot_contribution = 0
-    if payout > 0:  # Только если был выигрыш
+    if payout > 0:
         jackpot_percentage = random.randint(JACKPOT_PERCENTAGE_MIN, JACKPOT_PERCENTAGE_MAX)
-        
-        # Конвертируем выигрыш в рубли для котла
         currency = u.get('currency', 'RUB')
         payout_in_rub = convert_currency(payout, currency, 'RUB')
-        
         jackpot_contribution = int(payout_in_rub * jackpot_percentage / 100)
-        
-        # Добавляем в котел
         jackpot_filled = add_to_jackpot(uid, jackpot_contribution)
         
-        # Если котел заполнен
         if jackpot_filled:
             jackpot_amount = reset_jackpot()
             bot.send_message(m.chat.id, 
@@ -982,7 +905,6 @@ def game(m):
     for i in range(0,30,6): 
         g_s += " ".join(grid[i:i+6]) + "\n"
     
-    # ✅ Форматируем детали с валютой
     formatted_details = []
     for detail in details:
         parts = detail.rsplit(" — ", 1)
@@ -999,7 +921,6 @@ def game(m):
             res += f"💣 **Бомбы:** x{final_m}\n"
         res += f"🔥 **ИТОГО: +{format_money(payout, currency)}**\n"
         
-        # ✅ НОВОЕ: Показываем вклад в котел
         if jackpot_contribution > 0:
             jackpot_contribution_display = convert_currency(jackpot_contribution, 'RUB', currency)
             res += f"🏆 **В котел:** {format_money(jackpot_contribution_display, currency)}\n"
@@ -1044,6 +965,7 @@ if __name__ == '__main__':
         bot.delete_webhook()
         time.sleep(1)
         
+        # ✅ ИСПРАВЛЕННЫЙ WEBHOOK (mitikakakazvip)
         webhook_url = f"https://mitikakakazvip.onrender.com/{TOKEN}"
         bot.set_webhook(url=webhook_url)
         print(f"✅ Webhook установлен: {webhook_url}")
